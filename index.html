@@ -49,10 +49,10 @@
                   <button class="action__more btn" type="button">
                     <i class="ri-more-line"></i>
                   </button>
-                  <button class="action__like s-active btn" type="button">
+                  <button class="action__like   btn" type="button">
                     <i class="ri-heart-3-line"></i>
                   </button>
-                  <button class="action__list s-active btn" type="button">
+                  <button class="action__list btn" type="button">
                     <i class="ri-play-list-line"></i>
                   </button>
                 </div>
@@ -62,7 +62,7 @@
                 class="source d-none"
                 src="./songs/song1.mp3"
               ></audio>
-              <div class="controls">
+              <div class="controls view__list">
                 <div class="controls__duration">
                   <input
                     type="range"
@@ -80,13 +80,13 @@
                   <i class="ri-repeat-line"></i>
                 </button>
                 <button type="button" class="controls__prev control btn">
-                  <i class="ri-skip-back-fill"></i>
+                  <i class="ri-skip-back-line"></i>
                 </button>
                 <button type="button" class="controls__play control btn">
-                  <i class="ri-play-fill"></i>
+                  <i class="ri-play-large-line"></i>
                 </button>
                 <button type="button" class="controls__next control btn">
-                  <i class="ri-skip-forward-fill"></i>
+                  <i class="ri-skip-forward-line"></i>
                 </button>
                 <button type="button" class="controls__shuffle control btn">
                   <i class="ri-shuffle-line"></i>
@@ -100,9 +100,29 @@
           </footer>
         </div>
         <div class="music__list">
-          <button class="list__close btn">
+          <button class="music__close btn">
             <i class="ri-close-line"></i>
           </button>
+          <div class="music__item playing">
+            <img class="music__thumbnail" src="">
+            <div class="music__info">
+              <p class="music__title"></p>
+              <p class="music__singer"></p>
+            </div>
+            <div class="music__bars">
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+            </div>
+          </div>
+          <p class="music__heading">
+
+          </p>
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@
   --bg-color: rgba(237, 239, 243, 1);
   --bg-color-03: rgba(237, 239, 243, 0.3);
   --bg-color-01: rgba(229, 231, 236, 0.274);
-  --blur-color-01: rgba(0, 0, 0, 0.1);
+  --blur-color-01: rgba(0, 0, 0, 0.3);
   --bg-track-color: #fefefe8e;
   --b-radius: 8px;
   --font-ui: "InterCustom", "Segoe UI", Roboto, "Helvetica Neue", Arial,
@@ -48,17 +48,6 @@ body {
   transform: rotate(-90deg);
 }
 
-.background-app {
-  background-image: url("./images/default.png");
-  background-size: cover;
-  background-position: center;
-  height: min(800px, 100dvh);
-  width: min(460px, 100dvw);
-  margin: auto;
-  overflow: hidden;
-  transition: all 300ms ease;
-}
-
 .btn {
   background-color: transparent;
   border: none;
@@ -74,7 +63,8 @@ body {
 }
 
 .btn.s-active {
-  background-color: var(--bg-color-03);
+  /* background-color: var(--bg-color-03); */
+  color: var(--m-color);
 }
 
 .btn:hover {
@@ -85,11 +75,23 @@ body {
   transform: scale(0.8);
 }
 
+.background-app {
+  background-image: url("./images/default.png");
+  background-size: cover;
+  background-position: center;
+  height: min(800px, 100dvh);
+  width: min(460px, 100dvw);
+  margin: auto;
+  overflow: hidden;
+  transition: all 300ms ease;
+}
+
 /* app-music */
 .app__music {
   width: 200%;
   height: 100%;
   display: flex;
+  transform: translateX(-50%);
   background: var(--blur-color-01);
   backdrop-filter: blur(20px);
   transition: transform 0.3s ease;
@@ -195,8 +197,8 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 205px;
-  height: 205px;
+  width: 55%;
+  padding-top: 55%;
   background: url("./images/default.png");
   background-repeat: no-repeat;
   background-size: cover;
@@ -204,23 +206,6 @@ body {
   border-radius: 50%;
   z-index: 2;
   transition: background 300ms ease;
-}
-
-.show__bars {
-  position: relative;
-}
-
-.bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 1px;
-  border-radius: 999px;
-  background-image: url("./images/default.png");
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
-  transition: all 50ms linear;
 }
 
 .main__player {
@@ -291,6 +276,7 @@ body {
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  transition: all 0.3s ease;
 }
 
 .control {
@@ -299,6 +285,7 @@ body {
   cursor: pointer;
   color: white;
   background-color: transparent;
+  transition: all 0.5s ease;
 }
 
 .controls__repeat:hover,
@@ -308,13 +295,15 @@ body {
   background-color: var(--bg-color-03);
 }
 
-.controls__prev {
+.controls__repeat,
+.controls__shuffle {
+  font-size: 16px;
 }
 
 .controls__play {
   width: 55px;
   height: 55px;
-  background-color: var(--bg-color-03);
+  border: 1px solid var(--bg-color-03);
 }
 
 .controls__next {
@@ -429,14 +418,115 @@ body {
 /* music__list */
 .music__list {
   position: relative;
-  /* align-self: flex-start; */
   width: 50%;
-  height: 100%;
-  background-color: var(--bg-color-03);
+  height: calc(100% - 100px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: white;
+  padding: 8px;
+  overflow-y: auto;
 }
 
-.list__close {
+.music__list::-webkit-scrollbar {
+  display: none; /* Hides the scrollbar */
+}
+
+.music__close {
   position: absolute;
   right: 0px;
   top: 0px;
+  z-index: 2;
+}
+
+.music__heading {
+  font-size: 18px;
+}
+
+.music__item {
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.music__item:hover {
+  background-color: var(--bg-color-03);
+}
+
+.music__item.playing {
+  /* margin-top: 45px; */
+}
+.music__thumbnail {
+  width: 45px;
+  height: 45px;
+  border-radius: 4px;
+}
+.music__info {
+  flex: 1;
+}
+.music__title {
+  text-transform: capitalize;
+}
+.music__singer {
+  font-size: 12px;
+  color: #ccc;
+}
+.music__bars {
+  height: 100%;
+  width: 100px;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+.music__bars .bar {
+  width: 4px;
+  height: 0;
+  border-radius: 999px;
+  transition: all 0.1s ease;
+
+  background: linear-gradient(
+    to top,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 1)
+  );
+}
+
+.controls.view__list {
+  position: fixed;
+  z-index: 10;
+  gap: 16px;
+  justify-content: space-evenly;
+  bottom: 0;
+  left: 50%;
+  width: 50%;
+}
+
+.controls.view__list .controls__duration {
+  position: fixed;
+  bottom: 60px;
+  left: 57%;
+  width: 36%;
+}
+
+.controls.view__list .current-time,
+.controls.view__list .total-time {
+  display: none;
+}
+
+.controls.view__list .controls__repeat {
+  position: fixed;
+  bottom: 60px;
+  left: calc(50% + 8px);
+}
+
+.controls.view__list .controls__shuffle {
+  position: fixed;
+  bottom: 60px;
+  right: 8px;
 }

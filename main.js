@@ -1,8 +1,8 @@
 const $ = (sel, doc = document) => doc.querySelector(sel);
 const $$ = (sel, doc = document) => doc.querySelectorAll(sel);
 const imgDefault = `url("./images/default.png")`;
-const iconPlay = `<i class="ri-play-fill"></i>`;
-const iconPause = `<i class="ri-pause-fill"></i>`;
+const iconPlay = `<i class="ri-play-large-line"></i>`;
+const iconPause = `<i class="ri-pause-large-line"></i>`;
 const refs = {
   appMusic: ".app__music",
   backgroundApp: ".background-app",
@@ -11,6 +11,7 @@ const refs = {
   durationRange: ".duration__range",
   currentTime: ".current-time",
   totalTime: ".total-time",
+  controls: ".controls",
   btnRepeat: ".controls__repeat",
   btnPrev: ".controls__prev",
   btnPlay: ".controls__play",
@@ -26,7 +27,10 @@ const refs = {
   volumeRange: ".volume__range",
   btnVolume: ".action__muted",
   showVolume: ".show__volume",
-  listClose: ".list__close",
+  listClose: ".music__close",
+  musicList: ".music__list",
+  musicHeading: ".music__heading",
+  musicPlaying: ".music__item.playing",
   audio: "#audio",
 };
 
@@ -45,6 +49,11 @@ function MokiMusic(selAudio) {
   this.muted = false;
   this.songsed = [];
   this._autoHiddenMore = null;
+  this._ctx = null;
+  this._analyser = null;
+  this._frequencyData = null;
+  this._srcNode = null;
+  this._isAnimating = false;
   this.init();
 }
 
@@ -55,12 +64,14 @@ MokiMusic.prototype.init = function () {
   this._loadSong();
   this._updateSongInfo();
   this._loadSetting();
+  this._loadPlayList();
 };
 
 MokiMusic.prototype._loadElements = function () {
   for (key in refs) {
     this[key] = $(refs[key]);
   }
+  this.bars = $$(".music__bars .bar");
 };
 
 MokiMusic.prototype._loadEvents = function () {
@@ -69,7 +80,13 @@ MokiMusic.prototype._loadEvents = function () {
   });
 
   // play
-  this._audio.addEventListener("play", () => console.log("play fired"));
+  this._audio.addEventListener("play", async () => {
+    if (!this._ctx) this._createAudioContext();
+    await this._ctx.resume();
+    this._connectAudio();
+    this._startVisualizer();
+  });
+
   this._audio.addEventListener("playing", () => {});
 
   this._audio.addEventListener("timeupdate", () => {
@@ -80,15 +97,14 @@ MokiMusic.prototype._loadEvents = function () {
   this._audio.addEventListener("pause", () => {
     // stop spin
     if (this.spin) {
-      console.log("clear");
       clearInterval(this.spin);
       this.spin = null;
-      console.log(this.spin);
     }
+
+    this._stopVisualizer();
   });
 
   this._audio.addEventListener("ended", () => {
-    console.log("ended");
     if (this.loop) return;
     this.prevOrNext(true);
   });
@@ -134,11 +150,13 @@ MokiMusic.prototype._loadEvents = function () {
   });
 
   this.btnMore.addEventListener("click", (e) => {
+    e.currentTarget.classList.add("d-none");
     this.showVolume.classList.toggle("hidden");
     const isHidden = this.showVolume.classList.contains("hidden");
     if (!isHidden) {
       this._autoHiddenMore = setTimeout(() => {
         this.showVolume.classList.add("hidden");
+        this.btnMore.classList.remove("d-none");
       }, 2000);
     }
   });
@@ -155,13 +173,11 @@ MokiMusic.prototype._loadEvents = function () {
   });
 
   this.durationRange.addEventListener("input", (e) => {
-    console.log("input");
     this.isSeek = true;
     this._updateDuration(this.isSeek);
   });
 
   this.durationRange.addEventListener("change", (e) => {
-    console.log("change");
     this._audio.currentTime = this.durationRange.value;
     this._updateDuration(this.isSeek);
     this.play();
@@ -174,10 +190,12 @@ MokiMusic.prototype._loadEvents = function () {
   });
 
   this.btnPlayList.addEventListener("click", () => {
+    this.controls.classList.add("view__list");
     this.appMusic.style.transform = `translateX(-50%)`;
   });
 
   this.listClose.addEventListener("click", () => {
+    this.controls.classList.remove("view__list");
     this.appMusic.style.transform = `translateX(0%)`;
   });
 };
@@ -223,7 +241,20 @@ MokiMusic.prototype._startSpinDics = function () {
     if (this.degSpin === 360) {
       this.degSpin = 0;
     }
-  }, 16);
+  }, 32);
+};
+
+MokiMusic.prototype._stopSpinDics = function () {
+  if (this.spin) {
+    clearInterval(this.spin);
+  }
+  this.spin = null;
+};
+
+MokiMusic.prototype._resetSpinDics = function () {
+  this._stopSpinDics();
+  this.degSpin = 0;
+  this._startSpinDics();
 };
 
 MokiMusic.prototype._loadData = function () {
@@ -301,8 +332,10 @@ MokiMusic.prototype._loadSong = function (isFirst = false) {
 
   const songId = this._playList.songs[this._currentSongIndex];
   this._currentSong = this._getSongById(songId);
+  this._loadMusicPlaying();
   this._audio.setAttribute("src", this._currentSong.url);
   this._audio.loop = this.loop;
+  this._resetSpinDics();
 };
 
 MokiMusic.prototype._loadSetting = function () {
@@ -322,6 +355,104 @@ MokiMusic.prototype._loadSetting = function () {
     this.btnShuffle.classList.add("s-active");
   }
   this._updateVolumne();
+};
+
+MokiMusic.prototype._createAudioContext = function () {
+  this._ctx = new AudioContext();
+  this._analyser = this._ctx.createAnalyser();
+
+  this._analyser.fftSize = 64;
+  this._analyser.smoothingTimeConstant = 0.6;
+
+  this._frequencyData = new Uint8Array(this._analyser.frequencyBinCount);
+};
+
+MokiMusic.prototype._connectAudio = function () {
+  if (!this._srcNode) {
+    this._srcNode = this._ctx.createMediaElementSource(this._audio);
+    this._srcNode.connect(this._analyser);
+    this._analyser.connect(this._ctx.destination);
+  }
+};
+
+MokiMusic.prototype._startVisualizer = function () {
+  if (this._isAnimating) return;
+  this._isAnimating = true;
+
+  const animate = () => {
+    if (!this._isAnimating) return;
+    this._rafId = requestAnimationFrame(animate);
+    this._analyser.getByteFrequencyData(this._frequencyData);
+    const barCount = 8;
+    const binSize = Math.floor(this._frequencyData.length / barCount);
+    const maxHeight = 35;
+
+    for (let i = 0; i < barCount; i++) {
+      let sum = 0;
+      for (let j = 0; j < binSize; j++) {
+        sum += this._frequencyData[i * binSize + j];
+      }
+
+      const average = sum / binSize;
+
+      const height = (average / 255) * maxHeight;
+      this.bars[i].style.height = height + "px";
+    }
+  };
+
+  animate();
+};
+
+MokiMusic.prototype._stopVisualizer = function () {
+  this._isAnimating = false;
+  if (this._rafId) {
+    cancelAnimationFrame(this._rafId);
+    this._rafId = null;
+  }
+  this.bars.forEach((bar) => {
+    bar.style.height = "0px";
+  });
+};
+
+MokiMusic.prototype._loadMusicPlaying = function () {
+  const songPlaying = this._currentSong;
+  const songThumb = $(".music__thumbnail", this.musicPlaying);
+  const songTitle = $(".music__title", this.musicPlaying);
+  const songSinger = $(".music__singer", this.musicPlaying);
+  songThumb.setAttribute("src", songPlaying.image);
+  songTitle.textContent = songPlaying.title;
+  songSinger.textContent = songPlaying.author;
+};
+
+MokiMusic.prototype._loadPlayList = function () {
+  const dataSongId = this._playList.songs;
+  if (!dataSongId.length) {
+    return;
+  }
+
+  this._loadMusicPlaying();
+  this.musicHeading.textContent = this._playList.title;
+  const songs = this.data.songs.filter((song) => {
+    return dataSongId.includes(song.id);
+  });
+
+  songs.forEach((song) => {
+    const html = `
+    <div class="music__item">
+      <img class="music__thumbnail" src="${song.image}">
+      <div class="music__info">
+        <p class="music__title">${song.title}</p>
+        <p class="music__singer">${song.author}</p>
+      </div>
+      
+    </div>`;
+
+    const songEl = htmlToElement(html);
+    songEl.addEventListener("click", () => {
+      this.goToPlay(song.id);
+    });
+    this.musicList.appendChild(songEl);
+  });
 };
 
 MokiMusic.prototype._updateSongInfo = function () {
@@ -357,12 +488,12 @@ MokiMusic.prototype.handlerPlay = function () {
 
 MokiMusic.prototype.play = function () {
   this._audio.play();
-  this.btnPlay.innerHTML = `<i class="ri-pause-fill"></i>`;
+  this.btnPlay.innerHTML = `<i class="ri-pause-large-line"></i>`;
 };
 
 MokiMusic.prototype.pause = function () {
   this._audio.pause();
-  this.btnPlay.innerHTML = `<i class="ri-play-fill"></i>`;
+  this.btnPlay.innerHTML = `<i class="ri-play-large-line"></i>`;
 };
 
 MokiMusic.prototype.goToPlay = function (id) {
@@ -426,6 +557,11 @@ const player = new MokiMusic("#audio");
 
 function spinElement(el) {}
 
+function htmlToElement(html) {
+  const template = document.createElement("template");
+  template.innerHTML = html.trim();
+  return template.content.firstElementChild;
+}
 function nextOrPrevIndex(current, step, length) {
   console.log(current, step, length);
   return (current + step + length) % length;
