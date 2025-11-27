@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moki-music</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/remixicon@4.7.0/fonts/remixicon.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./resetcss.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="background-app">
+      <div class="app__music">
+        <div class="music__show">
+          <!-- header -->
+          <header class="header">
+            <div class="header__heading">
+              <p class="heading__label">Phát từ</p>
+              <p class="heading__playlist"></p>
+            </div>
+          </header>
+          <!-- main -->
+          <main class="main">
+            <div class="main__show">
+              <div class="show__image"></div>
+              <div class="show__bars" id="bars"></div>
+              <div class="show__volume hidden">
+                <input
+                  class="volume__range slider large white"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value="20"
+                />
+                <button class="action__muted btn s-active r-90" type="button">
+                  <i class="ri-volume-up-line"></i>
+                </button>
+              </div>
+            </div>
+            <div class="main__player">
+              <div class="player__song-info">
+                <p class="song-info__title">For a better day</p>
+                <p class="song-info__author">Genne Banks</p>
+                <div class="song-info__more">
+                  <button class="action__more btn" type="button">
+                    <i class="ri-more-line"></i>
+                  </button>
+                  <button class="action__like s-active btn" type="button">
+                    <i class="ri-heart-3-line"></i>
+                  </button>
+                  <button class="action__list s-active btn" type="button">
+                    <i class="ri-play-list-line"></i>
+                  </button>
+                </div>
+              </div>
+              <audio
+                id="audio"
+                class="source d-none"
+                src="./songs/song1.mp3"
+              ></audio>
+              <div class="controls">
+                <div class="controls__duration">
+                  <input
+                    type="range"
+                    name="time-bar"
+                    id="time-bar"
+                    class="duration__range slider"
+                    min="0"
+                    max="100"
+                    value="0"
+                  />
+                  <span class="current-time">0:00</span>
+                  <span class="total-time">04:32</span>
+                </div>
+                <button type="button" class="controls__repeat control btn">
+                  <i class="ri-repeat-line"></i>
+                </button>
+                <button type="button" class="controls__prev control btn">
+                  <i class="ri-skip-back-fill"></i>
+                </button>
+                <button type="button" class="controls__play control btn">
+                  <i class="ri-play-fill"></i>
+                </button>
+                <button type="button" class="controls__next control btn">
+                  <i class="ri-skip-forward-fill"></i>
+                </button>
+                <button type="button" class="controls__shuffle control btn">
+                  <i class="ri-shuffle-line"></i>
+                </button>
+              </div>
+            </div>
+          </main>
+          <!-- foot -->
+          <footer class="footer">
+            <p id="copyright"></p>
+          </footer>
+        </div>
+        <div class="music__list">
+          <button class="list__close btn">
+            <i class="ri-close-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
