@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Moki-music</title>
 
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;400;500;600;700&display=swap" rel="stylesheet">
+
     <link
       href="https://cdn.jsdelivr.net/npm/remixicon@4.7.0/fonts/remixicon.css"
       rel="stylesheet"
@@ -49,9 +51,6 @@
                   <button class="action__more btn" type="button">
                     <i class="ri-more-line"></i>
                   </button>
-                  <button class="action__like   btn" type="button">
-                    <i class="ri-heart-3-line"></i>
-                  </button>
                   <button class="action__list btn" type="button">
                     <i class="ri-play-list-line"></i>
                   </button>
@@ -62,7 +61,7 @@
                 class="source d-none"
                 src="./songs/song1.mp3"
               ></audio>
-              <div class="controls view__list">
+              <div class="controls">
                 <div class="controls__duration">
                   <input
                     type="range"
@@ -100,9 +99,14 @@
           </footer>
         </div>
         <div class="music__list">
-          <button class="music__close btn">
-            <i class="ri-close-line"></i>
-          </button>
+          <div class="music__header">
+            <button class="music__close btn">
+              <i class="ri-close-large-line"></i>
+            </button>
+            <p class="heading__label">Phát từ</p>
+            <p class="music__playlist__title heading__playlist"></p>
+          </div>
+          
           <div class="music__item playing">
             <img class="music__thumbnail" src="">
             <div class="music__info">
@@ -121,7 +125,7 @@
             </div>
           </div>
           <p class="music__heading">
-
+              Danh sách bài hát
           </p>
         </div>
       </div>

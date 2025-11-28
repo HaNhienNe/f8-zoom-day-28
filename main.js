@@ -1,13 +1,29 @@
 const $ = (sel, doc = document) => doc.querySelector(sel);
 const $$ = (sel, doc = document) => doc.querySelectorAll(sel);
-const imgDefault = `url("./images/default.png")`;
-const iconPlay = `<i class="ri-play-large-line"></i>`;
-const iconPause = `<i class="ri-pause-large-line"></i>`;
+
+const DEFAULT = {
+  image: `url("./images/default.png")`,
+  timeVolume: 2000, // mini second
+  volume: 65, // %
+  iconPlay: `<i class="ri-play-large-line"></i>`,
+  iconPause: `<i class="ri-pause-large-line"></i>`,
+  iconVolume: `<i class="ri-volume-up-line"></i>`,
+  iconMuted: `<i class="ri-volume-mute-line"></i>`,
+  amountVol: 10,
+  skip: 5, // second
+};
+
 const refs = {
+  // app
   appMusic: ".app__music",
   backgroundApp: ".background-app",
+
+  // show
   showImage: ".show__image",
+  showVolume: ".show__volume",
   bars: "#bars",
+
+  // controls
   durationRange: ".duration__range",
   currentTime: ".current-time",
   totalTime: ".total-time",
@@ -17,26 +33,24 @@ const refs = {
   btnPlay: ".controls__play",
   btnNext: ".controls__next",
   btnShuffle: ".controls__shuffle",
+
+  // action
   btnPlayList: ".action__list",
   btnLike: ".action__like",
   btnBack: ".action__back",
+  volumeRange: ".volume__range",
+  btnVolume: ".action__muted",
+  btnMore: ".action__more",
+
+  // info
   songInfoTitle: ".song-info__title",
   songInfoAuthor: ".song-info__author",
   headingPlaylist: ".heading__playlist",
-  btnMore: ".action__more",
-  volumeRange: ".volume__range",
-  btnVolume: ".action__muted",
-  showVolume: ".show__volume",
   listClose: ".music__close",
   musicList: ".music__list",
-  musicHeading: ".music__heading",
+  musicTitle: ".music__playlist__title",
   musicPlaying: ".music__item.playing",
-  audio: "#audio",
 };
-
-// const refs = {
-//   bar: "#bars .bar",
-// };
 
 function MokiMusic(selAudio) {
   this._audio = $(selAudio);
@@ -54,18 +68,16 @@ function MokiMusic(selAudio) {
   this._frequencyData = null;
   this._srcNode = null;
   this._isAnimating = false;
-  this.init();
-}
 
-MokiMusic.prototype.init = function () {
   this._loadElements();
   this._loadEvents();
   this._loadData();
-  this._loadSong();
+  this._loadSong(true);
   this._updateSongInfo();
   this._loadSetting();
   this._loadPlayList();
-};
+  this._loadHotkey();
+}
 
 MokiMusic.prototype._loadElements = function () {
   for (key in refs) {
@@ -79,104 +91,105 @@ MokiMusic.prototype._loadEvents = function () {
     this._updateSongInfo();
   });
 
-  // play
-  this._audio.addEventListener("play", async () => {
+  // onPlay
+  this._audio.addEventListener("play", () => {
     if (!this._ctx) this._createAudioContext();
-    await this._ctx.resume();
     this._connectAudio();
     this._startVisualizer();
+    const musicItems = $$(".music__item:not(.playing)", this.musicList);
+    removesClass(musicItems, "s-active");
+    const songIndex = this._playList.songs.findIndex((songId) => {
+      return songId === this._currentSong.id;
+    });
+    musicItems[songIndex]?.classList?.add("s-active");
   });
 
-  this._audio.addEventListener("playing", () => {});
+  // onPause
+  this._audio.addEventListener("pause", () => {
+    this._stopSpinDics();
+    this._stopVisualizer();
+  });
 
+  // onTimeupdate
   this._audio.addEventListener("timeupdate", () => {
     this._updateDuration(this.isSeek);
     this._startSpinDics();
   });
 
-  this._audio.addEventListener("pause", () => {
-    // stop spin
-    if (this.spin) {
-      clearInterval(this.spin);
-      this.spin = null;
-    }
-
-    this._stopVisualizer();
-  });
-
+  // onEnded
   this._audio.addEventListener("ended", () => {
     if (this.loop) return;
     this.prevOrNext(true);
   });
 
+  // Control next
   this.btnNext.addEventListener("click", () => {
     this.prevOrNext(true);
   });
 
+  // Control prev
   this.btnPrev.addEventListener("click", () => {
     this.prevOrNext(false);
   });
 
+  // Control play
   this.btnPlay.addEventListener("click", () => {
-    this.handlerPlay();
+    this.togglePlay();
   });
 
+  // Control repeat
   this.btnRepeat.addEventListener("click", (e) => {
     // set loop
     this.loop = !this.loop;
     this._audio.loop = this.loop;
+
     // set css active
     e.currentTarget.classList.toggle("s-active");
     this._saveSetting();
   });
 
+  // Control Shuffle
   this.btnShuffle.addEventListener("click", (e) => {
     // set shuffle
     this.shuffle = !this.shuffle;
+
     // set css active
     e.currentTarget.classList.toggle("s-active");
     this._saveSetting();
   });
 
+  // Control Volume
   this.showVolume.addEventListener("pointerenter", () => {
     clearTimeout(this._autoHiddenMore);
     this._autoHiddenMore = null;
   });
 
+  // Control Volume
   this.showVolume.addEventListener("pointerleave", () => {
     this._autoHiddenMore = setTimeout(() => {
       this.showVolume.classList.add("hidden");
-    }, 2000);
+      this.btnMore.classList.remove("d-none");
+    }, DEFAULT.timeVolume);
   });
 
+  // action more
   this.btnMore.addEventListener("click", (e) => {
-    e.currentTarget.classList.add("d-none");
-    this.showVolume.classList.toggle("hidden");
-    const isHidden = this.showVolume.classList.contains("hidden");
-    if (!isHidden) {
-      this._autoHiddenMore = setTimeout(() => {
-        this.showVolume.classList.add("hidden");
-        this.btnMore.classList.remove("d-none");
-      }, 2000);
-    }
+    this._showVolumeRange();
+    this._autoHiddenShowVolume();
   });
 
+  // action muted
   this.btnVolume.addEventListener("click", (e) => {
-    // set muted
-    this.muted = !this.muted;
-    this._audio.muted = this.muted;
-    // set html
-    const html = this.muted
-      ? `<i class="ri-volume-mute-line"></i>`
-      : `<i class="ri-volume-up-line"></i>`;
-    e.currentTarget.innerHTML = html;
+    this.toggleMuted();
   });
 
+  // duration range
   this.durationRange.addEventListener("input", (e) => {
     this.isSeek = true;
     this._updateDuration(this.isSeek);
   });
 
+  // duration range
   this.durationRange.addEventListener("change", (e) => {
     this._audio.currentTime = this.durationRange.value;
     this._updateDuration(this.isSeek);
@@ -184,20 +197,35 @@ MokiMusic.prototype._loadEvents = function () {
     this.isSeek = false;
   });
 
+  // Volume range
   this.volumeRange.addEventListener("input", (e) => {
     this._updateVolumne();
     this._saveSetting();
   });
 
+  // action playlist
   this.btnPlayList.addEventListener("click", () => {
     this.controls.classList.add("view__list");
     this.appMusic.style.transform = `translateX(-50%)`;
   });
 
+  // action listClose
   this.listClose.addEventListener("click", () => {
     this.controls.classList.remove("view__list");
     this.appMusic.style.transform = `translateX(0%)`;
   });
+};
+
+MokiMusic.prototype._showVolumeRange = function () {
+  this.btnMore.classList.add("d-none");
+  this.showVolume.classList.remove("hidden");
+};
+
+MokiMusic.prototype._autoHiddenShowVolume = function () {
+  this._autoHiddenMore = setTimeout(() => {
+    this.showVolume.classList.add("hidden");
+    this.btnMore.classList.remove("d-none");
+  }, DEFAULT.timeVolume);
 };
 
 MokiMusic.prototype._updateDuration = function () {
@@ -220,6 +248,19 @@ MokiMusic.prototype._updateVolumne = function () {
   this.volumeRange.style.setProperty("--val", `${val}%`);
 };
 
+MokiMusic.prototype._changeVolume = function (amount) {
+  this.volumeRange.value = Math.min(
+    100,
+    Math.max(0, Number(this.volumeRange.value) + amount)
+  );
+  this._updateVolumne();
+  this._saveSetting();
+  clearTimeout(this._autoHiddenMore);
+  this._autoHiddenMore = null;
+  this._showVolumeRange();
+  this._autoHiddenShowVolume();
+};
+
 MokiMusic.prototype._saveSetting = function () {
   this.setting = {
     vol: this.volumeRange.value,
@@ -235,18 +276,20 @@ MokiMusic.prototype._startSpinDics = function () {
     return;
   }
 
-  this.spin = setInterval(() => {
+  const rotate = () => {
     this.degSpin += 0.5;
+    if (this.degSpin >= 360) this.degSpin -= 360;
+
     this.showImage.style.transform = `translate(-50%, -50%) rotate(${this.degSpin}deg)`;
-    if (this.degSpin === 360) {
-      this.degSpin = 0;
-    }
-  }, 32);
+    this.spin = requestAnimationFrame(rotate);
+  };
+
+  this.spin = requestAnimationFrame(rotate);
 };
 
 MokiMusic.prototype._stopSpinDics = function () {
   if (this.spin) {
-    clearInterval(this.spin);
+    cancelAnimationFrame(this.spin);
   }
   this.spin = null;
 };
@@ -258,69 +301,69 @@ MokiMusic.prototype._resetSpinDics = function () {
 };
 
 MokiMusic.prototype._loadData = function () {
-  localStorage.clear();
-  this.data = JSON.parse(localStorage.getItem("data"));
-  this.setting = JSON.parse(localStorage.getItem("setting"));
-  if (!this.data) {
-    this.data = {
-      songs: [
-        {
-          id: 1,
-          url: "./songs/song1.mp3",
-          title: "Có duyên không nợ | Remix",
-          author: "NB3 Hoài Bảo",
-          isLike: false,
-          image: "./images/img1.png",
-          duration: 0,
-          isSelected: false,
-        },
-        {
-          id: 2,
-          url: "./songs/song2.mp3",
-          title: "Nơi vực nơi trời | Remix",
-          author: "Lê Bảo Bình",
-          isLike: false,
-          image: "./images/img2.png",
-          duration: 0,
-          isSelected: false,
-        },
-        {
-          id: 3,
-          url: "./songs/song3.mp3",
-          title: "Anh thôi nhân nhượng | Remix",
-          author: "An Clock",
-          isLike: false,
-          image: "./images/img3.png",
-          duration: 0,
-          isSelected: false,
-        },
-        {
-          id: 4,
-          url: "./songs/song4.mp3",
-          title: "Mất kết nối | Remix",
-          author: "Dương Domic",
-          isLike: false,
-          image: "./images/img4.jpg",
-          duration: 0,
-          isSelected: false,
-        },
-      ],
-      playList: [
-        { id: 2, title: "Bài Hát Yêu Thích 💗", songs: [1, 2, 3, 4] },
-        { id: 1, title: "Top Rankings ", songs: [4, 2, 1] },
-      ],
-    };
-    localStorage.setItem("data", JSON.stringify(this.data));
-  }
-  if (!this.setting) {
-    this.setting = {
-      vol: 65,
-      loop: true,
-      shuffle: false,
-    };
-    localStorage.setItem("setting", JSON.stringify(this.setting));
-  }
-  this._loadSong(true);
+  this.data = {
+    songs: [
+      {
+        id: 1,
+        url: "./songs/song1.mp3",
+        title: "Có duyên không nợ | Remix",
+        author: "Tina Hồ",
+        isLike: false,
+        image: "./images/img1.png",
+        duration: 0,
+        isSelected: false,
+      },
+      {
+        id: 2,
+        url: "./songs/song2.mp3",
+        title: "Nơi vực nơi trời | Remix",
+        author: "Lê Bảo Bình",
+        isLike: false,
+        image: "./images/img2.png",
+        duration: 0,
+        isSelected: false,
+      },
+      {
+        id: 5,
+        url: "./songs/song5.mp3",
+        title: "Xóa hết | Remix",
+        author: "Du Thiên",
+        isLike: false,
+        image: "./images/img5.jpg",
+        duration: 0,
+        isSelected: false,
+      },
+      {
+        id: 3,
+        url: "./songs/song3.mp3",
+        title: "Anh thôi nhân nhượng | Remix",
+        author: "Dương Hoàng Phạm",
+        isLike: false,
+        image: "./images/img3.png",
+        duration: 0,
+        isSelected: false,
+      },
+      {
+        id: 4,
+        url: "./songs/song4.mp3",
+        title: "Mất kết nối",
+        author: "Dương Domic",
+        isLike: false,
+        image: "./images/img4.jpg",
+        duration: 0,
+        isSelected: false,
+      },
+    ],
+    playList: [
+      {
+        id: 2,
+        title: "Khi Remix Gọi Tên 😎",
+        songs: [5, 1, 2, 3, 4],
+        isSelected: true,
+      },
+      { id: 1, title: "Top Rankings ", songs: [4, 2, 1], isSelected: true },
+    ],
+  };
 };
 
 MokiMusic.prototype._loadSong = function (isFirst = false) {
@@ -332,6 +375,10 @@ MokiMusic.prototype._loadSong = function (isFirst = false) {
 
   const songId = this._playList.songs[this._currentSongIndex];
   this._currentSong = this._getSongById(songId);
+  this.data.songs.forEach((song) => {
+    song.isSelected = false;
+  });
+  this._currentSong.isSelected = true;
   this._loadMusicPlaying();
   this._audio.setAttribute("src", this._currentSong.url);
   this._audio.loop = this.loop;
@@ -339,9 +386,20 @@ MokiMusic.prototype._loadSong = function (isFirst = false) {
 };
 
 MokiMusic.prototype._loadSetting = function () {
+  this.setting = JSON.parse(localStorage.getItem("setting"));
+  if (!this.setting) {
+    this.setting = {
+      vol: 65,
+      loop: true,
+      shuffle: false,
+    };
+    localStorage.setItem("setting", JSON.stringify(this.setting));
+  }
+
   // volume
   this._audio.volume = this.setting.vol / 100;
   this.volumeRange.value = this.setting.vol;
+
   // loop
   this._audio.loop = this.setting.loop;
   this.loop = this.setting.loop;
@@ -420,8 +478,10 @@ MokiMusic.prototype._loadMusicPlaying = function () {
   const songTitle = $(".music__title", this.musicPlaying);
   const songSinger = $(".music__singer", this.musicPlaying);
   songThumb.setAttribute("src", songPlaying.image);
-  songTitle.textContent = songPlaying.title;
-  songSinger.textContent = songPlaying.author;
+  songTitle.textContent = truncateByWord(songPlaying.title);
+  songTitle.title = songPlaying.title;
+  songSinger.textContent = truncateByWord(songPlaying.author);
+  songSinger.title = songPlaying.author;
 };
 
 MokiMusic.prototype._loadPlayList = function () {
@@ -431,20 +491,22 @@ MokiMusic.prototype._loadPlayList = function () {
   }
 
   this._loadMusicPlaying();
-  this.musicHeading.textContent = this._playList.title;
-  const songs = this.data.songs.filter((song) => {
-    return dataSongId.includes(song.id);
+
+  this.musicTitle.textContent = truncateByWord(this._playList.title);
+  this.musicTitle.title = this._playList.title;
+
+  const songs = this._playList.songs.map((songId) => {
+    return this._getSongById(songId);
   });
 
   songs.forEach((song) => {
     const html = `
-    <div class="music__item">
+    <div class="music__item ${song.isSelected ? "s-active" : ""}">
       <img class="music__thumbnail" src="${song.image}">
       <div class="music__info">
         <p class="music__title">${song.title}</p>
         <p class="music__singer">${song.author}</p>
       </div>
-      
     </div>`;
 
     const songEl = htmlToElement(html);
@@ -455,35 +517,100 @@ MokiMusic.prototype._loadPlayList = function () {
   });
 };
 
+MokiMusic.prototype._loadHotkey = function () {
+  document.addEventListener("keydown", (e) => {
+    switch (e.code) {
+      case "Space":
+        e.preventDefault();
+        this.togglePlay();
+        break;
+
+      case "ArrowUp":
+        e.preventDefault();
+        this._changeVolume(DEFAULT.amountVol);
+        break;
+
+      case "ArrowDown":
+        e.preventDefault();
+        this._changeVolume(-DEFAULT.amountVol);
+        break;
+
+      case "ArrowLeft":
+        e.preventDefault();
+        this._audio.currentTime = Math.min(
+          this._audio.duration,
+          Math.max(0, this._audio.currentTime - DEFAULT.skip)
+        );
+        break;
+
+      case "ArrowRight":
+        e.preventDefault();
+        this._audio.currentTime = Math.min(
+          this._audio.duration,
+          Math.max(0, this._audio.currentTime + DEFAULT.skip)
+        );
+        break;
+
+      case "Escape":
+        e.preventDefault();
+        this.controls.classList.remove("view__list");
+        this.appMusic.style.transform = `translateX(0%)`;
+        break;
+
+      case "KeyM":
+        e.preventDefault();
+        this._changeVolume(0);
+        this.toggleMuted();
+        break;
+
+      default:
+        break;
+    }
+  });
+};
+
 MokiMusic.prototype._updateSongInfo = function () {
-  // get song and load metadata
   // song info
   this.songInfoTitle.textContent = this._currentSong.title;
   this.songInfoAuthor.textContent = this._currentSong.author;
+
   // image
   const imageSong = this._currentSong.image
     ? this._currentSong.image
-    : imgDefault;
-  this.backgroundApp.style.backgroundImage = `url("${imageSong}")`;
-  // this.bar
+    : DEFAULT.image;
   this.showImage.style.backgroundImage = `url("${imageSong}")`;
+
+  // background
+  this.backgroundApp.style.backgroundImage = `url("${imageSong}")`;
+
   // Play
-  this.btnPlay.innerHTML = this._audio.paused ? iconPlay : iconPause;
+  this.btnPlay.innerHTML = this._audio.paused
+    ? DEFAULT.iconPlay
+    : DEFAULT.iconPause;
+
   // time
   this.currentTime.textContent = formatDuration(0);
   this.totalTime.textContent = formatDuration(this._audio.duration);
+
   // duration range
   this.durationRange.min = 0;
   this.durationRange.max = this._audio.duration;
   this.durationRange.value = 0;
 };
 
-MokiMusic.prototype.handlerPlay = function () {
+MokiMusic.prototype.togglePlay = function () {
   if (this._audio.paused) {
     this.play();
   } else {
     this.pause();
   }
+};
+
+MokiMusic.prototype.toggleMuted = function () {
+  this.muted = !this.muted;
+  this._audio.muted = this.muted;
+  const html = this.muted ? DEFAULT.iconMuted : DEFAULT.iconVolume;
+  this.btnVolume.innerHTML = html;
 };
 
 MokiMusic.prototype.play = function () {
@@ -503,7 +630,8 @@ MokiMusic.prototype.goToPlay = function (id) {
     return;
   }
 
-  this._audio.setAttribute("src", song.url);
+  this._currentSongIndex = this._playList.songs.indexOf(id);
+  this._loadSong();
   this.play();
 };
 
@@ -553,8 +681,8 @@ MokiMusic.prototype._clearSonged = function () {
 };
 
 const player = new MokiMusic("#audio");
-// Utils
 
+// Utils
 function spinElement(el) {}
 
 function htmlToElement(html) {
@@ -563,7 +691,6 @@ function htmlToElement(html) {
   return template.content.firstElementChild;
 }
 function nextOrPrevIndex(current, step, length) {
-  console.log(current, step, length);
   return (current + step + length) % length;
 }
 
@@ -583,7 +710,27 @@ function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function renderCopyright(sel, author = "moki", license = "Học viên của F8.") {
+function removesClass(els, className) {
+  if (els && typeof className === "string") {
+    els.forEach((el) => el.classList.remove(className));
+  }
+}
+
+function truncateByWord(str, maxLength = 20) {
+  if (str.length <= maxLength) {
+    return str;
+  }
+
+  let truncated = str.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(" ");
+  if (lastSpace > 0) {
+    truncated = truncated.slice(0, lastSpace);
+  }
+
+  return truncated + "...";
+}
+
+function renderCopyright(sel, author = "moki", license = "học viên của F8.") {
   const yearText = new Date().getFullYear();
   const contentFotter = `© ${yearText}. @${author} - ${license}`;
   document.querySelector(sel).textContent = contentFotter;

@@ -6,8 +6,7 @@
   --blur-color-01: rgba(0, 0, 0, 0.3);
   --bg-track-color: #fefefe8e;
   --b-radius: 8px;
-  --font-ui: "InterCustom", "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    sans-serif;
+  --font-ui: "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 * {
@@ -21,6 +20,7 @@ body {
   font-family: var(--font-ui);
   font-size: 16px;
   line-height: 1.45;
+  font-weight: 400;
   color: #111;
 }
 .d-none {
@@ -63,7 +63,7 @@ body {
 }
 
 .btn.s-active {
-  /* background-color: var(--bg-color-03); */
+  background-color: var(--bg-color-03);
   color: var(--m-color);
 }
 
@@ -90,8 +90,8 @@ body {
 .app__music {
   width: 200%;
   height: 100%;
+  padding: 8px 0;
   display: flex;
-  transform: translateX(-50%);
   background: var(--blur-color-01);
   backdrop-filter: blur(20px);
   transition: transform 0.3s ease;
@@ -134,10 +134,11 @@ body {
 
 .heading__label {
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: 8px;
   opacity: 0.7;
   letter-spacing: 1.2px;
   color: white;
+  font-weight: 200;
 }
 
 .heading__playlist {
@@ -183,6 +184,11 @@ body {
 
 .action__muted:active {
   transform: rotate(-90deg);
+}
+
+.action__muted.s-active {
+  background-color: var(--bg-color-03);
+  color: white;
 }
 
 .volume__range {
@@ -252,11 +258,12 @@ body {
 }
 
 .song-info__title {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .song-info__author {
-  font-size: 12px;
+  font-size: 10px;
+  color: #ccc;
 }
 
 .song-info__more {
@@ -300,16 +307,15 @@ body {
   font-size: 16px;
 }
 
+.controls__repeat.s-active,
+.controls__shuffle.s-active {
+  background-color: transparent;
+}
+
 .controls__play {
   width: 55px;
   height: 55px;
-  border: 1px solid var(--bg-color-03);
-}
-
-.controls__next {
-}
-
-.controls__shuffle {
+  border: 2px solid white;
 }
 
 .controls__duration {
@@ -438,7 +444,10 @@ body {
   top: 0px;
   z-index: 2;
 }
-
+.music__list .heading__label,
+.music__list .music__playlist__title {
+  text-align: center;
+}
 .music__heading {
   font-size: 18px;
 }
@@ -455,12 +464,17 @@ body {
   user-select: none;
 }
 
+.music__item.s-active {
+  background-color: var(--bg-color-03);
+  color: white;
+}
+
 .music__item:hover {
   background-color: var(--bg-color-03);
 }
 
 .music__item.playing {
-  /* margin-top: 45px; */
+  background-color: var(--bg-color-03);
 }
 .music__thumbnail {
   width: 45px;
@@ -470,11 +484,13 @@ body {
 .music__info {
   flex: 1;
 }
+
 .music__title {
   text-transform: capitalize;
+  font-size: 14px;
 }
 .music__singer {
-  font-size: 12px;
+  font-size: 10px;
   color: #ccc;
 }
 .music__bars {
@@ -482,6 +498,7 @@ body {
   width: 100px;
   display: flex;
   align-items: flex-end;
+  justify-content: end;
   gap: 4px;
 }
 .music__bars .bar {
@@ -521,12 +538,12 @@ body {
 
 .controls.view__list .controls__repeat {
   position: fixed;
-  bottom: 60px;
+  bottom: 58px;
   left: calc(50% + 8px);
 }
 
 .controls.view__list .controls__shuffle {
   position: fixed;
-  bottom: 60px;
+  bottom: 58px;
   right: 8px;
 }
